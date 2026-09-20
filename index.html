@@ -1,0 +1,15 @@
+<!-- Add this block inside .main-content below <div id="results"> -->
+<div class="card" id="aiSection" style="margin-top: 24px;">
+  <h3>💬 Ask Florence Insights</h3>
+  <p style="color: #8b949e; font-size: 0.9rem;">Ask a question or type a DuckDB SQL query to analyze your data.</p>
+  
+  <div style="display: flex; gap: 10px; margin-top: 12px;">
+    <input type="text" id="userQuery" placeholder="e.g. SELECT Location, SUM(TRY_CAST('Total Spent' AS FLOAT)) FROM clean_data GROUP BY Location" style="flex: 1; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text);" />
+    <button class="btn" onclick="runAnalysisQuery()" style="width: auto;">Ask AI</button>
+  </div>
+
+  <div id="queryAnswer" style="margin-top: 16px; padding: 12px; background: #0d1117; border-radius: 6px; display: none;">
+    <strong style="color: var(--primary);">Result:</strong>
+    <pre id="answerText" style="color: #c9d1d9; margin-top: 8px; font-family: monospace;"></pre>
+  </div>
+</div>
