@@ -1,6 +1,0 @@
-streamlit
-duckdb
-polars
-fastexcel
-plotly
-pyarrow
