@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+duckdb
+python-multipart
+google-genai
+pandas
