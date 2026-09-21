@@ -1,5 +1,0 @@
-fastapi
-uvicorn
-duckdb
-python-multipart
-openai
