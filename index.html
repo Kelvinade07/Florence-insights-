@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Florence Insights | AI Data Platform</title>
+  <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
+  <style>
+    :root {
+      --bg: #121214;
+      --card-bg: #1c1c1f;
+      --border: #2e2e32;
+      --text: #ececed;
+      --subtext: #8e8e93;
+      --accent: #2c64e3;
+      --pill-bg: #18181b;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .header {
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+    }
+    .main-workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px;
+      padding-bottom: 120px; /* Space for fixed chat bar */
+    }
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    /* Spreadsheet Styling */
+    .spreadsheet-container {
+      overflow-x: auto;
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th {
+      background: #18181b;
+      position: sticky;
+      top: 0;
+      color: #ffffff;
+    }
+    /* Chat Stream */
+    .chat-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--pill-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    /* Fixed Bottom Chat Prompt */
+    .bottom-chat-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .prompt-container {
+      width: 100%;
+      max-width: 800px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .prompt-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .send-btn, .upload-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .upload-btn { background: #28282c; }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .chart-box {
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <strong>⚡ Florence Insights AI</strong>
+    <span style="font-size: 0.85rem; color: var(--subtext);">Powered by DuckDB & OpenAI</span>
+  </div>
+
+  <div class="main-workspace">
+    
+    <!-- Spreadsheet Preview (Top) -->
+    <div id="spreadsheetSection" class="section-card" style="display: none;">
+      <h3 style="margin-top: 0; font-size: 1rem; color: var(--subtext);">📊 Spreadsheet Preview</h3>
+      <div class="spreadsheet-container">
+        <table>
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Analytics Dashboard Charts -->
+    <div id="chartSection" class="section-card" style="display: none;">
+      <h3 style="margin-top: 0; font-size: 1rem; color: var(--subtext);">📈 Auto Visualizations</h3>
+      <div class="charts-grid">
+        <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+        <div class="chart-box"><canvas id="secondaryChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Conversational AI Chat History -->
+    <div class="section-card">
+      <h3 style="margin-top: 0; font-size: 1rem; color: var(--subtext);">💬 AI Analyst Conversation</h3>
+      <div id="chatStream" class="chat-stream">
+        <div class="chat-bubble assistant">Upload a CSV file to start analyzing your data with AI.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom AI Prompt Bar -->
+  <div class="bottom-chat-bar">
+    <div class="prompt-container">
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()" title="Upload CSV">+</button>
+      <input type="file" id="fileInput" style="display: none;" accept=".csv" onchange="processData()" />
+      <input type="text" id="userQuestion" class="prompt-input" placeholder="Ask AI a question about your spreadsheet..." onkeydown="if(event.key==='Enter') submitPrompt()" />
+      <button class="send-btn" onclick="submitPrompt()">↑</button>
+    </div>
+  </div>
+
+  <script>
+    let catChartInstance = null;
+    let secChartInstance = null;
+
+    async function processData() {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files[0]) return;
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const response = await fetch('/analyze', { method: 'POST', body: formData });
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+          renderSpreadsheet(data);
+          renderCharts(data.chart_data);
+          renderChatHistory(data.history);
+        }
+      } catch (err) {
+        alert('Upload failed.');
+      }
+    }
+
+    function renderSpreadsheet(data) {
+      document.getElementById('spreadsheetSection').style.display = 'block';
+      document.getElementById('tableHead').innerHTML = data.columns.map(c => `<th>${c}</th>`).join('');
+      document.getElementById('tableBody').innerHTML = data.preview.map(row => 
+        `<tr>${data.columns.map(c => `<td>${row[c] !== undefined ? row[c] : ''}</td>`).join('')}</tr>`
+      ).join('');
+    }
+
+    function renderCharts(chartData) {
+      document.getElementById('chartSection').style.display = 'block';
+      
+      const ctx1 = document.getElementById('categoryChart').getContext('2d');
+      if (catChartInstance) catChartInstance.destroy();
+      catChartInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: { labels: chartData.categories.labels, datasets: [{ data: chartData.categories.values, backgroundColor: '#2c64e3' }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      const ctx2 = document.getElementById('secondaryChart').getContext('2d');
+      if (secChartInstance) secChartInstance.destroy();
+      secChartInstance = new Chart(ctx2, {
+        type: 'doughnut',
+        data: { labels: chartData.secondary.labels, datasets: [{ data: chartData.secondary.values, backgroundColor: ['#2c64e3', '#2ea043', '#3fb950', '#a371f7'] }] },
+        options: { responsive: true }
+      });
+    }
+
+    function renderChatHistory(history) {
+      const stream = document.getElementById('chatStream');
+      stream.innerHTML = history.map(m => `<div class="chat-bubble ${m.role}">${m.content}</div>`).join('');
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    async function submitPrompt() {
+      const input = document.getElementById('userQuestion');
+      const question = input.value.trim();
+      if (!question) return;
+
+      input.value = '';
+      const formData = new FormData();
+      formData.append('question', question);
+
+      try {
+        const response = await fetch('/ask', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (data.status === 'success') {
+          renderChatHistory(data.history);
+        }
+      } catch (err) {
+        alert('Query execution failed.');
+      }
+    }
+  </script>
+</body>
+  </html>
+  
