@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Florence Insights AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f12;
+      --card-bg: #161920;
+      --border: #262a36;
+      --text: #e1e4ed;
+      --subtext: #8b92a5;
+      --accent: #2563eb;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      color: var(--subtext);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      max-height: 250px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #1e222d;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-box {
+      background: #111318;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      height: 220px;
+      position: relative;
+    }
+
+    .chat-box {
+      height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      max-width: 85%;
+    }
+
+    .msg.user {
+      background: var(--accent);
+      align-self: flex-end;
+    }
+
+    .msg.assistant {
+      background: #212633;
+      align-self: flex-start;
+    }
+
+    .input-bar {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      background: var(--card-bg);
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+    }
+
+    .file-btn {
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      background: #262a36;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <strong>⚡ Florence Insights AI</strong>
+    <span style="font-size: 0.85rem; color: var(--subtext);">Powered by DuckDB & Gemini AI</span>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📊 Spreadsheet Preview</div>
+    <div class="table-container" id="tableContainer">
+      <p style="color: var(--subtext); font-size: 0.85rem;">Upload a dataset to view rows.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📈 Auto Visualizations</div>
+    <div class="charts-grid">
+      <div class="chart-box"><canvas id="chart1"></canvas></div>
+      <div class="chart-box"><canvas id="chart2"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom: 70px;">
+    <div class="section-title">💬 AI Analyst Conversation</div>
+    <div class="chat-box" id="chatBox">
+      <div class="msg assistant">Upload a CSV file to start analyzing your data with AI.</div>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <label class="file-btn">
+      ➕
+      <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="uploadCSV()">
+    </label>
+    <input type="text" id="questionInput" placeholder="Ask AI a question about your spreadsheet...">
+    <button onclick="askAI()">↑</button>
+  </div>
+
+  <script>
+    let chart1Instance = null;
+    let chart2Instance = null;
+
+    async function uploadCSV() {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files[0]) return;
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      const res = await fetch('/analyze', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        renderTable(data.columns, data.preview);
+        renderCharts(data.chart_data);
+        renderHistory(data.history);
+      }
+    }
+
+    function renderTable(cols, rows) {
+      let html = '<table><thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+      rows.forEach(r => {
+        html += '<tr>' + cols.map(c => `<td>${r[c] || ''}</td>`).join('') + '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function renderCharts(chartData) {
+      if (chart1Instance) chart1Instance.destroy();
+      if (chart2Instance) chart2Instance.destroy();
+
+      const ctx1 = document.getElementById('chart1').getContext('2d');
+      chart1Instance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: chartData.categories.labels,
+          datasets: [{ label: chartData.cat_title, data: chartData.categories.values, backgroundColor: '#2563eb' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      const ctx2 = document.getElementById('chart2').getContext('2d');
+      chart2Instance = new Chart(ctx2, {
+        type: 'pie',
+        data: {
+          labels: chartData.secondary.labels,
+          datasets: [{ data: chartData.secondary.values, backgroundColor: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function renderHistory(history) {
+      const chatBox = document.getElementById('chatBox');
+      chatBox.innerHTML = '';
+      history.forEach(m => {
+        const div = document.createElement('div');
+        div.className = `msg ${m.role}`;
+        div.innerText = m.content;
+        chatBox.appendChild(div);
+      });
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function askAI() {
+      const input = document.getElementById('questionInput');
+      const q = input.value.trim();
+      if (!q) return;
+
+      input.value = '';
+
+      const formData = new FormData();
+      formData.append('question', q);
+
+      const res = await fetch('/ask', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.history) {
+        renderHistory(data.history);
+      }
+    }
+  </script>
+</body>
+  </html>
+  
